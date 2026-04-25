@@ -1,114 +1,157 @@
-```html id="r4c2k1"
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Number Guessing Game</title>
-  <style>
-    body {
-      font-family: Arial;
-      text-align: center;
-      background: #0f172a;
-      color: white;
-      padding: 50px;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Cam App</title>
+    <style>
+        :root {
+            --primary: #ff4757;
+            --dark: #2f3542;
+        }
 
-    .box {
-      background: #1e293b;
-      padding: 30px;
-      border-radius: 15px;
-      display: inline-block;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--dark);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-    input, button {
-      padding: 10px;
-      margin: 10px;
-      border-radius: 8px;
-      border: none;
-      font-size: 16px;
-    }
+        /* Camera Viewport */
+        #camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            background: #000;
+        }
 
-    button {
-      background: #38bdf8;
-      cursor: pointer;
-    }
+        video {
+            width: 100%;
+            height: auto;
+            transform: scaleX(-1); /* Mirror view for selfies */
+        }
 
-    button:hover {
-      background: #0ea5e9;
-    }
-  </style>
+        /* Controls */
+        .controls {
+            padding: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            background: rgba(0,0,0,0.8);
+        }
+
+        #snap {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 5px solid white;
+            background: var(--primary);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        #snap:active { transform: scale(0.9); }
+
+        /* Gallery Sidebar/Bottom */
+        #gallery {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            overflow-x: auto;
+            background: #1e2124;
+            border-top: 1px solid #3e4444;
+        }
+
+        .thumbnail {
+            height: 100px;
+            min-width: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        canvas { display: none; }
+    </style>
 </head>
 <body>
 
-  <div class="box">
-    <h1>🎮 Guess the Number</h1>
-
-    <p id="info">Choose difficulty to start</p>
-
-    <button onclick="startGame(10,5)">Easy</button>
-    <button onclick="startGame(50,7)">Medium</button>
-    <button onclick="startGame(100,10)">Hard</button>
-
-    <div id="gameArea" style="display:none;">
-      <p id="status"></p>
-      <input type="number" id="guessInput" placeholder="Enter guess">
-      <br>
-      <button onclick="checkGuess()">Guess</button>
+    <div id="camera-container">
+        <video id="video" autoplay playsinline></video>
     </div>
-  </div>
 
-<script>
-let secretNumber;
-let attempts;
-let maxAttempts;
+    <div class="controls">
+        <button id="snap" title="Take Photo"></button>
+    </div>
 
-function startGame(maxNum, tries) {
-  secretNumber = Math.floor(Math.random() * maxNum) + 1;
-  attempts = tries;
-  maxAttempts = tries;
+    <div id="gallery">
+        </div>
 
-  document.getElementById("gameArea").style.display = "block";
-  document.getElementById("status").innerText =
-    "Guess a number between 1 and " + maxNum + 
-    " | Attempts left: " + attempts;
-}
+    <canvas id="canvas"></canvas>
 
-function checkGuess() {
-  const input = document.getElementById("guessInput");
-  const guess = Number(input.value);
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const snap = document.getElementById('snap');
+        const gallery = document.getElementById('gallery');
 
-  if (!guess) {
-    alert("Enter a number!");
-    return;
-  }
+        // 1. Access the Camera
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                alert("Camera access denied or not supported.");
+            }
+        }
 
-  if (guess === secretNumber) {
-    document.getElementById("status").innerText =
-      "🎉 Correct! You win!";
-    return;
-  }
+        // 2. Capture Photo
+        snap.addEventListener('click', () => {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Draw video frame to canvas
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1); // Maintain mirror effect in save
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  attempts--;
+            // Convert to Image
+            const dataURL = canvas.toDataURL('image/png');
+            addToGallery(dataURL);
+        });
 
-  if (attempts <= 0) {
-    document.getElementById("status").innerText =
-      "💀 You lost! Number was " + secretNumber;
-    return;
-  }
+        // 3. Add to Gallery
+        function addToGallery(src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'thumbnail';
+            img.onclick = () => {
+                // Simple download trigger on click
+                const link = document.createElement('a');
+                link.href = src;
+                link.download = `capture_${Date.now()}.png`;
+                link.click();
+            };
+            gallery.prepend(img); // Newest first
+        }
 
-  if (guess < secretNumber) {
-    document.getElementById("status").innerText =
-      "📉 Too low! Attempts left: " + attempts;
-  } else {
-    document.getElementById("status").innerText =
-      "📈 Too high! Attempts left: " + attempts;
-  }
-
-  input.value = "";
-}
-</script>
-
+        initCamera();
+    </script>
 </body>
 </html>
-```
