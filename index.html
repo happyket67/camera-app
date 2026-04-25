@@ -3,246 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Camera</title>
+    <title>Camera</title>
     <style>
         :root {
             --ios-yellow: #ffcc00;
             --ios-red: #ff3b30;
+            --ios-bg: #000;
         }
 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body {
-            margin: 0; background: #000; color: white;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0; background: var(--ios-bg); color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
             height: 100vh; display: flex; flex-direction: column;
             overflow: hidden; user-select: none;
         }
 
-        /* Viewport & Focus */
+        /* Top Bar */
+        .top-bar {
+            height: 60px; display: flex; justify-content: space-between;
+            align-items: center; padding: 0 20px; z-index: 10;
+        }
+
+        /* Viewport */
         #camera-wrapper {
             position: relative; flex-grow: 1;
+            width: 100%; overflow: hidden;
             display: flex; align-items: center; justify-content: center;
-            overflow: hidden; cursor: crosshair;
         }
 
-        video { width: 100%; height: 100%; object-fit: cover; }
+        video { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
 
-        #focus-ring {
-            position: absolute; width: 70px; height: 70px;
-            border: 1.5px solid var(--ios-yellow);
-            display: none; pointer-events: none;
-            transition: transform 0.2s ease-out;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        /* iOS Focus Square */
+        #focus-square {
+            position: absolute; width: 65px; height: 65px;
+            border: 1px solid var(--ios-yellow); display: none;
+            pointer-events: none; transition: transform 0.2s ease;
+        }
+        #focus-square::after {
+            content: ''; position: absolute; top: -5px; left: 50%;
+            width: 1px; height: 5px; background: var(--ios-yellow);
         }
 
-        /* UI Elements */
-        .bottom-ui { background: black; padding-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
-        
-        .mode-switcher { display: flex; gap: 25px; padding: 15px; font-size: 13px; font-weight: 700; }
-        .mode { color: #888; transition: 0.3s; cursor: pointer; }
+        /* Bottom Control Panel */
+        .bottom-ui {
+            background: black; padding-bottom: 40px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        /* Mode Selector - Sliding Style */
+        .mode-container {
+            width: 100%; overflow: hidden; padding: 15px 0;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .mode-list {
+            display: flex; gap: 20px; font-size: 13px; font-weight: 600;
+            letter-spacing: 0.5px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .mode { color: #999; cursor: pointer; }
         .mode.active { color: var(--ios-yellow); }
 
+        /* Main Shutter Row */
         .shutter-row {
-            width: 100%; display: flex; justify-content: space-evenly; align-items: center;
+            width: 100%; display: flex; justify-content: space-around; align-items: center;
         }
 
-        /* Gallery Thumbnail */
-        .gallery-thumb {
-            width: 50px; height: 50px; border-radius: 4px;
-            background: #222; overflow: hidden; cursor: pointer;
-            border: 1px solid #444;
+        .thumb-link {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: #222; overflow: hidden; border: none;
         }
-        .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-link img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Shutter Button */
         .shutter-btn {
-            width: 76px; height: 76px; border-radius: 50%;
+            width: 78px; height: 78px; border-radius: 50%;
             border: 4px solid white; display: flex; align-items: center; justify-content: center;
-            background: transparent;
         }
         .shutter-inner {
-            width: 62px; height: 62px; border-radius: 50%;
-            background: white; transition: 0.2s;
+            width: 64px; height: 64px; border-radius: 50%;
+            background: white; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .video-mode .shutter-inner { background: var(--ios-red); }
-        .recording .shutter-inner { border-radius: 10px; transform: scale(0.6); }
+        .video-active .shutter-inner { background: var(--ios-red); }
+        .recording .shutter-inner { border-radius: 10px; transform: scale(0.55); }
 
-        .flip-btn {
-            background: #222; border: none; color: white;
-            width: 50px; height: 50px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
+        .flip-icon {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: #1c1c1e; display: flex; align-items: center; justify-content: center;
         }
 
-        /* Fullscreen Gallery Overlay */
-        #gallery-overlay {
+        /* Gallery Overlay */
+        #gallery-view {
             position: fixed; inset: 0; background: black;
-            display: none; flex-direction: column; z-index: 100;
+            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100; display: flex; flex-direction: column;
         }
-        #gallery-header { padding: 20px; display: flex; justify-content: space-between; font-weight: 600; }
-        #gallery-content {
+        #gallery-view.open { transform: translateY(0); }
+
+        .gallery-nav {
+            padding: 15px; display: flex; justify-content: space-between;
+            align-items: center; border-bottom: 0.5px solid #333;
+        }
+
+        #grid-container {
             flex-grow: 1; display: grid; grid-template-columns: repeat(3, 1fr);
             gap: 2px; overflow-y: auto; padding: 2px;
         }
-        .grid-item { aspect-ratio: 1/1; width: 100%; object-fit: cover; background: #111; }
+        .grid-img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+
+        /* Fullscreen Photo Viewer */
+        #photo-viewer {
+            position: fixed; inset: 0; background: black; z-index: 200;
+            display: none; align-items: center; justify-content: center;
+        }
+        #photo-viewer img { max-width: 100%; max-height: 100%; }
+        #close-viewer { position: absolute; top: 40px; left: 20px; font-weight: bold; }
     </style>
 </head>
-<body>
+<body class="photo-active">
+
+    <div class="top-bar">
+        <span><svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg></span>
+        <span id="timer" style="display:none; color:white; font-variant-numeric: tabular-nums;">00:00</span>
+        <span><svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span>
+    </div>
 
     <div id="camera-wrapper">
         <video id="video" autoplay playsinline></video>
-        <div id="focus-ring"></div>
-        <div id="recording-timer" style="position:absolute; top:20px; display:none; color:red; font-weight:bold;">REC 00:00</div>
+        <div id="focus-square"></div>
     </div>
 
     <div class="bottom-ui">
-        <div class="mode-switcher">
-            <span id="mode-photo" class="mode active">PHOTO</span>
-            <span id="mode-video" class="mode">VIDEO</span>
+        <div class="mode-container">
+            <div class="mode-list">
+                <span class="mode" onclick="switchMode('video')">VIDEO</span>
+                <span class="mode active" onclick="switchMode('photo')">PHOTO</span>
+                <span class="mode">PORTRAIT</span>
+            </div>
         </div>
 
         <div class="shutter-row">
-            <div class="gallery-thumb" id="open-gallery">
-                <img id="recent-img" src="" style="display:none;">
-            </div>
-            
+            <button class="thumb-link" id="btn-gallery">
+                <img id="latest-thumb" src="" style="display:none">
+            </button>
+
             <div class="shutter-btn" id="shutter">
                 <div class="shutter-inner"></div>
             </div>
 
-            <button class="flip-btn" id="flip-cam">
-                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
-            </button>
+            <div class="flip-icon" id="btn-flip">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M16 7h-8l3-3h2l3 3zm-3 14h-2l-3-3h8l-3 3zm5-9c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6 6 2.69 6 6z"/></svg>
+            </div>
         </div>
     </div>
 
-    <div id="gallery-overlay">
-        <div id="gallery-header">
-            <span onclick="closeGallery()" style="color: var(--ios-yellow); cursor:pointer;">Done</span>
-            <span>All Photos</span>
-            <span style="opacity:0">Done</span>
+    <div id="gallery-view">
+        <div class="gallery-nav">
+            <span style="color:var(--ios-yellow)" onclick="toggleGallery(false)">Done</span>
+            <span style="font-weight:700">All Photos</span>
+            <span style="color:var(--ios-yellow)">Select</span>
         </div>
-        <div id="gallery-content"></div>
+        <div id="grid-container"></div>
+    </div>
+
+    <div id="photo-viewer">
+        <span id="close-viewer">✕</span>
+        <img id="full-img" src="">
     </div>
 
     <canvas id="canvas" style="display:none"></canvas>
 
     <script>
         const video = document.getElementById('video');
-        const wrapper = document.getElementById('camera-wrapper');
-        const focusRing = document.getElementById('focus-ring');
         const shutter = document.getElementById('shutter');
-        const galleryOverlay = document.getElementById('gallery-overlay');
-        const galleryContent = document.getElementById('gallery-content');
-        const recentImg = document.getElementById('recent-img');
-
-        let stream = null;
-        let mode = 'photo';
-        let isFront = true;
-        let mediaRecorder;
-        let chunks = [];
+        const galleryView = document.getElementById('gallery-view');
+        const grid = document.getElementById('grid-container');
+        const latestThumb = document.getElementById('latest-thumb');
+        
+        let stream, recorder, chunks = [];
+        let isFront = true, mode = 'photo', isRecording = false;
         let photos = [];
 
-        // 1. Lifecycle Management (Stop camera when leaving)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) stopCamera();
-            else startCamera();
-        });
-
-        async function startCamera() {
-            if (stream) stopCamera();
-            const constraints = { 
-                video: { facingMode: isFront ? "user" : "environment", focusMode: "continuous" },
-                audio: mode === 'video'
-            };
+        // 1. Camera Engine
+        async function initCamera() {
+            if(stream) stream.getTracks().forEach(t => t.stop());
             try {
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: isFront ? "user" : "environment" },
+                    audio: true
+                });
                 video.srcObject = stream;
                 video.style.transform = isFront ? "scaleX(-1)" : "none";
-            } catch (e) { console.error(e); }
+            } catch (e) { alert("Camera error: " + e); }
         }
 
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-        }
-
-        // 2. Focus System
-        wrapper.onclick = (e) => {
-            const rect = wrapper.getBoundingClientRect();
-            const x = e.clientX - rect.left - 35;
-            const y = e.clientY - rect.top - 35;
-
-            focusRing.style.display = 'block';
-            focusRing.style.left = `${x}px`;
-            focusRing.style.top = `${y}px`;
-            focusRing.style.transform = 'scale(1.5)';
-            
-            setTimeout(() => { focusRing.style.transform = 'scale(1)'; }, 10);
-            setTimeout(() => { focusRing.style.display = 'none'; }, 1000);
-
-            // Attempt hardware focus if supported
-            const track = stream.getVideoTracks()[0];
-            if (track.getCapabilities().focusMode) {
-                track.applyConstraints({ advanced: [{ pointsOfInterest: [{x: e.clientX/rect.width, y: e.clientY/rect.height}] }] });
-            }
+        // 2. Focus & Haptic effect
+        document.getElementById('camera-wrapper').onclick = (e) => {
+            const sq = document.getElementById('focus-square');
+            sq.style.left = `${e.clientX - 32}px`;
+            sq.style.top = `${e.clientY - 32 - 60}px`;
+            sq.style.display = 'block';
+            sq.style.transform = 'scale(1.3)';
+            setTimeout(() => sq.style.transform = 'scale(1)', 50);
+            setTimeout(() => sq.style.display = 'none', 1000);
         };
 
-        // 3. Shutter & Storage (No Popups)
+        // 3. Shutter Logic
         shutter.onclick = () => {
             if (mode === 'photo') {
-                const canvas = document.getElementById('canvas');
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                if (isFront) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
-                ctx.drawImage(video, 0, 0);
-                
-                const data = canvas.toDataURL('image/jpeg');
-                saveToGallery(data);
+                capturePhoto();
             } else {
-                toggleRecording();
+                isRecording ? stopRecording() : startRecording();
             }
         };
 
-        function saveToGallery(dataUrl) {
-            photos.push(dataUrl);
-            recentImg.src = dataUrl;
-            recentImg.style.display = 'block';
-            // Note: We don't call click() on a link here, so no "Save As" popup appears.
+        function capturePhoto() {
+            const canvas = document.getElementById('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if(isFront) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+            ctx.drawImage(video, 0, 0);
+            saveItem(canvas.toDataURL('image/jpeg'));
+            
+            // Shutter blink effect
+            video.style.opacity = '0';
+            setTimeout(() => video.style.opacity = '1', 50);
         }
 
-        // 4. Mode Switching
-        document.getElementById('mode-photo').onclick = () => { mode = 'photo'; updateUI(); };
-        document.getElementById('mode-video').onclick = () => { mode = 'video'; updateUI(); };
-        document.getElementById('flip-cam').onclick = () => { isFront = !isFront; startCamera(); };
-
-        function updateUI() {
-            document.body.classList.toggle('video-mode', mode === 'video');
-            document.getElementById('mode-photo').classList.toggle('active', mode === 'photo');
-            document.getElementById('mode-video').classList.toggle('active', mode === 'video');
-            startCamera(); 
+        function startRecording() {
+            isRecording = true;
+            document.body.classList.add('recording');
+            document.getElementById('timer').style.display = 'block';
+            recorder = new MediaRecorder(stream);
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/mp4' });
+                saveItem(URL.createObjectURL(blob), true);
+                chunks = [];
+            };
+            recorder.start();
         }
 
-        // 5. Built-in Gallery Logic
-        document.getElementById('open-gallery').onclick = () => {
-            galleryContent.innerHTML = '';
-            photos.slice().reverse().forEach(src => {
-                const img = document.createElement('img');
-                img.src = src;
-                img.className = 'grid-item';
-                img.onclick = () => { // Option to download from inside gallery if desired
-                    const a = document.createElement('a');
-                    a.href = src; a.download = 'capture.jpg'; a.click();
-                };
-                galleryContent.appendChild(img);
+        function stopRecording() {
+            isRecording = false;
+            document.body.classList.remove('recording');
+            document.getElementById('timer').style.display = 'none';
+            recorder.stop();
+        }
+
+        function saveItem(url) {
+            photos.unshift(url);
+            latestThumb.src = url;
+            latestThumb.style.display = 'block';
+        }
+
+        // 4. UI Navigation
+        function switchMode(newMode) {
+            mode = newMode;
+            document.body.className = newMode + '-active';
+            document.querySelectorAll('.mode').forEach(m => {
+                m.classList.toggle('active', m.innerText.toLowerCase() === newMode);
             });
-            galleryOverlay.style.display = 'flex';
+        }
+
+        function toggleGallery(show) {
+            if(show) {
+                grid.innerHTML = '';
+                photos.forEach(p => {
+                    const img = document.createElement('img');
+                    img.src = p; img.className = 'grid-img';
+                    img.onclick = () => openViewer(p);
+                    grid.appendChild(img);
+                });
+                galleryView.classList.add('open');
+            } else {
+                galleryView.classList.remove('open');
+            }
+        }
+
+        function openViewer(src) {
+            document.getElementById('full-img').src = src;
+            document.getElementById('photo-viewer').style.display = 'flex';
+        }
+
+        document.getElementById('close-viewer').onclick = () => {
+            document.getElementById('photo-viewer').style.display = 'none';
         };
 
-        window.closeGallery = () => { galleryOverlay.style.display = 'none'; };
+        document.getElementById('btn-gallery').onclick = () => toggleGallery(true);
+        document.getElementById('btn-flip').onclick = () => { isFront = !isFront; initCamera(); };
 
-        // Initial Start
-        startCamera();
+        // 5. Lifecycle Stop
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stream?.getTracks().forEach(t => t.stop());
+            else initCamera();
+        });
+
+        initCamera();
     </script>
 </body>
 </html>
