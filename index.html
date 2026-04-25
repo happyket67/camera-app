@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iCamera Web</title>
+    <title>Pro Camera</title>
     <style>
         :root {
             --ios-yellow: #ffcc00;
@@ -11,140 +11,97 @@
         }
 
         body {
-            margin: 0;
-            background: #000;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-            user-select: none;
+            margin: 0; background: #000; color: white;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none;
         }
 
-        /* Viewport */
+        /* Viewport & Focus */
         #camera-wrapper {
-            position: relative;
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
+            position: relative; flex-grow: 1;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; cursor: crosshair;
         }
 
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        #focus-ring {
+            position: absolute; width: 70px; height: 70px;
+            border: 1.5px solid var(--ios-yellow);
+            display: none; pointer-events: none;
+            transition: transform 0.2s ease-out;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        /* Bottom Controls Area */
-        .bottom-ui {
-            background: rgba(0, 0, 0, 0.9);
-            padding-bottom: env(safe-area-inset-bottom);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* Mode Switcher */
-        .mode-switcher {
-            display: flex;
-            gap: 20px;
-            padding: 15px 0;
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .mode { color: #888; cursor: pointer; }
+        /* UI Elements */
+        .bottom-ui { background: black; padding-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
+        
+        .mode-switcher { display: flex; gap: 25px; padding: 15px; font-size: 13px; font-weight: 700; }
+        .mode { color: #888; transition: 0.3s; cursor: pointer; }
         .mode.active { color: var(--ios-yellow); }
 
-        /* Shutter & Actions */
         .shutter-row {
-            width: 100%;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 20px 0 40px 0;
+            width: 100%; display: flex; justify-content: space-evenly; align-items: center;
         }
 
-        .gallery-preview {
-            width: 45px;
-            height: 45px;
-            border-radius: 8px;
-            background: #333;
-            overflow: hidden;
+        /* Gallery Thumbnail */
+        .gallery-thumb {
+            width: 50px; height: 50px; border-radius: 4px;
+            background: #222; overflow: hidden; cursor: pointer;
             border: 1px solid #444;
         }
+        .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-        .gallery-preview img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* iPhone Shutter Button */
+        /* Shutter Button */
         .shutter-btn {
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
-            border: 4px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 76px; height: 76px; border-radius: 50%;
+            border: 4px solid white; display: flex; align-items: center; justify-content: center;
             background: transparent;
-            cursor: pointer;
         }
-
         .shutter-inner {
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            background: white;
-            transition: all 0.2s ease;
+            width: 62px; height: 62px; border-radius: 50%;
+            background: white; transition: 0.2s;
         }
-
-        /* Video Mode Styling */
-        body.video-mode .shutter-inner { background: var(--ios-red); }
-        body.recording .shutter-inner { border-radius: 8px; transform: scale(0.6); }
+        .video-mode .shutter-inner { background: var(--ios-red); }
+        .recording .shutter-inner { border-radius: 10px; transform: scale(0.6); }
 
         .flip-btn {
-            background: #333;
-            border: none;
-            color: white;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
+            background: #222; border: none; color: white;
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
         }
 
-        #recording-timer {
-            position: absolute;
-            top: 40px;
-            background: rgba(0,0,0,0.5);
-            padding: 4px 12px;
-            border-radius: 4px;
-            display: none;
+        /* Fullscreen Gallery Overlay */
+        #gallery-overlay {
+            position: fixed; inset: 0; background: black;
+            display: none; flex-direction: column; z-index: 100;
         }
+        #gallery-header { padding: 20px; display: flex; justify-content: space-between; font-weight: 600; }
+        #gallery-content {
+            flex-grow: 1; display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 2px; overflow-y: auto; padding: 2px;
+        }
+        .grid-item { aspect-ratio: 1/1; width: 100%; object-fit: cover; background: #111; }
     </style>
 </head>
 <body>
 
     <div id="camera-wrapper">
-        <div id="recording-timer">00:00</div>
         <video id="video" autoplay playsinline></video>
+        <div id="focus-ring"></div>
+        <div id="recording-timer" style="position:absolute; top:20px; display:none; color:red; font-weight:bold;">REC 00:00</div>
     </div>
 
     <div class="bottom-ui">
         <div class="mode-switcher">
-            <span class="mode active" onclick="setMode('photo')">PHOTO</span>
-            <span class="mode" onclick="setMode('video')">VIDEO</span>
+            <span id="mode-photo" class="mode active">PHOTO</span>
+            <span id="mode-video" class="mode">VIDEO</span>
         </div>
 
         <div class="shutter-row">
-            <div class="gallery-preview" id="gallery-trigger">
-                <img id="last-shot" src="" style="display:none">
+            <div class="gallery-thumb" id="open-gallery">
+                <img id="recent-img" src="" style="display:none;">
             </div>
             
             <div class="shutter-btn" id="shutter">
@@ -152,115 +109,139 @@
             </div>
 
             <button class="flip-btn" id="flip-cam">
-                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12l-4.4 4.4L3 15V9h6l-1.4 1.4L9 12zm3-9.3V5h6v6l-1.4-1.4-4.6 4.6 4.4 4.4L15 21v-6h-6l1.4 1.4-1.4 1.4L3 12.3V19h18V3h-9z"/></svg>
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
             </button>
         </div>
+    </div>
+
+    <div id="gallery-overlay">
+        <div id="gallery-header">
+            <span onclick="closeGallery()" style="color: var(--ios-yellow); cursor:pointer;">Done</span>
+            <span>All Photos</span>
+            <span style="opacity:0">Done</span>
+        </div>
+        <div id="gallery-content"></div>
     </div>
 
     <canvas id="canvas" style="display:none"></canvas>
 
     <script>
-        let currentMode = 'photo';
-        let useFrontCamera = true;
-        let mediaRecorder;
-        let recordedChunks = [];
-        let stream;
-
         const video = document.getElementById('video');
+        const wrapper = document.getElementById('camera-wrapper');
+        const focusRing = document.getElementById('focus-ring');
         const shutter = document.getElementById('shutter');
-        const lastShot = document.getElementById('last-shot');
-        const timer = document.getElementById('recording-timer');
+        const galleryOverlay = document.getElementById('gallery-overlay');
+        const galleryContent = document.getElementById('gallery-content');
+        const recentImg = document.getElementById('recent-img');
+
+        let stream = null;
+        let mode = 'photo';
+        let isFront = true;
+        let mediaRecorder;
+        let chunks = [];
+        let photos = [];
+
+        // 1. Lifecycle Management (Stop camera when leaving)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stopCamera();
+            else startCamera();
+        });
 
         async function startCamera() {
-            if (stream) stream.getTracks().forEach(track => track.stop());
-            
-            const constraints = {
-                video: { facingMode: useFrontCamera ? "user" : "environment" },
-                audio: true
+            if (stream) stopCamera();
+            const constraints = { 
+                video: { facingMode: isFront ? "user" : "environment", focusMode: "continuous" },
+                audio: mode === 'video'
             };
-
             try {
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
-                // Mirror only front camera
-                video.style.transform = useFrontCamera ? 'scaleX(-1)' : 'scaleX(1)';
-            } catch (err) {
-                console.error("Camera error:", err);
+                video.style.transform = isFront ? "scaleX(-1)" : "none";
+            } catch (e) { console.error(e); }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
             }
         }
 
-        function setMode(mode) {
-            currentMode = mode;
-            document.body.classList.toggle('video-mode', mode === 'video');
-            document.querySelectorAll('.mode').forEach(el => {
-                el.classList.toggle('active', el.innerText.toLowerCase() === mode);
-            });
-        }
+        // 2. Focus System
+        wrapper.onclick = (e) => {
+            const rect = wrapper.getBoundingClientRect();
+            const x = e.clientX - rect.left - 35;
+            const y = e.clientY - rect.top - 35;
 
-        document.getElementById('flip-cam').onclick = () => {
-            useFrontCamera = !useFrontCamera;
-            startCamera();
+            focusRing.style.display = 'block';
+            focusRing.style.left = `${x}px`;
+            focusRing.style.top = `${y}px`;
+            focusRing.style.transform = 'scale(1.5)';
+            
+            setTimeout(() => { focusRing.style.transform = 'scale(1)'; }, 10);
+            setTimeout(() => { focusRing.style.display = 'none'; }, 1000);
+
+            // Attempt hardware focus if supported
+            const track = stream.getVideoTracks()[0];
+            if (track.getCapabilities().focusMode) {
+                track.applyConstraints({ advanced: [{ pointsOfInterest: [{x: e.clientX/rect.width, y: e.clientY/rect.height}] }] });
+            }
         };
 
+        // 3. Shutter & Storage (No Popups)
         shutter.onclick = () => {
-            if (currentMode === 'photo') {
-                takePhoto();
+            if (mode === 'photo') {
+                const canvas = document.getElementById('canvas');
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                if (isFront) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+                ctx.drawImage(video, 0, 0);
+                
+                const data = canvas.toDataURL('image/jpeg');
+                saveToGallery(data);
             } else {
                 toggleRecording();
             }
         };
 
-        function takePhoto() {
-            const canvas = document.getElementById('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            
-            if (useFrontCamera) {
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-            }
-            ctx.drawImage(video, 0, 0);
-            
-            const imgData = canvas.toDataURL('image/jpeg');
-            updateGallery(imgData);
+        function saveToGallery(dataUrl) {
+            photos.push(dataUrl);
+            recentImg.src = dataUrl;
+            recentImg.style.display = 'block';
+            // Note: We don't call click() on a link here, so no "Save As" popup appears.
         }
 
-        function toggleRecording() {
-            if (mediaRecorder && mediaRecorder.state === "recording") {
-                mediaRecorder.stop();
-                document.body.classList.remove('recording');
-                timer.style.display = 'none';
-            } else {
-                startRecording();
-            }
+        // 4. Mode Switching
+        document.getElementById('mode-photo').onclick = () => { mode = 'photo'; updateUI(); };
+        document.getElementById('mode-video').onclick = () => { mode = 'video'; updateUI(); };
+        document.getElementById('flip-cam').onclick = () => { isFront = !isFront; startCamera(); };
+
+        function updateUI() {
+            document.body.classList.toggle('video-mode', mode === 'video');
+            document.getElementById('mode-photo').classList.toggle('active', mode === 'photo');
+            document.getElementById('mode-video').classList.toggle('active', mode === 'video');
+            startCamera(); 
         }
 
-        function startRecording() {
-            recordedChunks = [];
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: "video/mp4" });
-                const url = URL.createObjectURL(blob);
-                updateGallery(url, true);
-            };
-            mediaRecorder.start();
-            document.body.classList.add('recording');
-            timer.style.display = 'block';
-        }
+        // 5. Built-in Gallery Logic
+        document.getElementById('open-gallery').onclick = () => {
+            galleryContent.innerHTML = '';
+            photos.slice().reverse().forEach(src => {
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'grid-item';
+                img.onclick = () => { // Option to download from inside gallery if desired
+                    const a = document.createElement('a');
+                    a.href = src; a.download = 'capture.jpg'; a.click();
+                };
+                galleryContent.appendChild(img);
+            });
+            galleryOverlay.style.display = 'flex';
+        };
 
-        function updateGallery(url, isVideo = false) {
-            lastShot.src = url; // Note: videos need a thumbnail, for now we just show the URL source
-            lastShot.style.display = 'block';
-            
-            // Auto download (iPhone style doesn't do this, but helpful for web)
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = isVideo ? 'video.mp4' : 'photo.jpg';
-            a.click();
-        }
+        window.closeGallery = () => { galleryOverlay.style.display = 'none'; };
 
+        // Initial Start
         startCamera();
     </script>
 </body>
