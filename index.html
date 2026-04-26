@@ -8,70 +8,70 @@
         :root {
             --ios-yellow: #ffcc00;
             --ios-red: #ff3b30;
-            --ios-bg: #000;
+            --ios-blue: #007aff;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            margin: 0; background: var(--ios-bg); color: white;
+            margin: 0; background: #000; color: white;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
             height: 100vh; display: flex; flex-direction: column;
             overflow: hidden; user-select: none;
         }
 
-        /* Top Bar */
+        /* Top Bar Fixes */
         .top-bar {
             height: 60px; display: flex; justify-content: space-between;
-            align-items: center; padding: 0 20px; z-index: 10;
+            align-items: center; padding: 0 25px; z-index: 10;
         }
+        .top-icon { cursor: pointer; transition: opacity 0.2s; }
+        .top-icon:active { opacity: 0.5; }
 
-        /* Viewport */
         #camera-wrapper {
             position: relative; flex-grow: 1;
             width: 100%; overflow: hidden;
-            display: flex; align-items: center; justify-content: center;
+            background: #000;
         }
 
-        video { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+        video { 
+            width: 100%; height: 100%; object-fit: cover; 
+            background: #000;
+        }
 
-        /* iOS Focus Square */
+        /* Portrait Blur Effect */
+        body.portrait-active video { filter: saturate(1.1) contrast(1.1); }
+        .portrait-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
+            display: none;
+        }
+        body.portrait-active .portrait-overlay { display: block; }
+
         #focus-square {
             position: absolute; width: 65px; height: 65px;
             border: 1px solid var(--ios-yellow); display: none;
-            pointer-events: none; transition: transform 0.2s ease;
-        }
-        #focus-square::after {
-            content: ''; position: absolute; top: -5px; left: 50%;
-            width: 1px; height: 5px; background: var(--ios-yellow);
+            pointer-events: none;
         }
 
-        /* Bottom Control Panel */
-        .bottom-ui {
-            background: black; padding-bottom: 40px;
-            display: flex; flex-direction: column; align-items: center;
-        }
-
-        /* Mode Selector - Sliding Style */
+        /* Bottom UI */
+        .bottom-ui { background: black; padding-bottom: 30px; }
+        
         .mode-container {
             width: 100%; overflow: hidden; padding: 15px 0;
-            display: flex; justify-content: center; align-items: center;
+            display: flex; justify-content: center;
         }
-        .mode-list {
-            display: flex; gap: 20px; font-size: 13px; font-weight: 600;
-            letter-spacing: 0.5px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .mode-list { display: flex; gap: 20px; font-size: 13px; font-weight: 700; }
         .mode { color: #999; cursor: pointer; }
         .mode.active { color: var(--ios-yellow); }
 
-        /* Main Shutter Row */
         .shutter-row {
             width: 100%; display: flex; justify-content: space-around; align-items: center;
         }
 
         .thumb-link {
             width: 48px; height: 48px; border-radius: 50%;
-            background: #222; overflow: hidden; border: none;
+            background: #333; overflow: hidden; border: none; padding: 0;
         }
         .thumb-link img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -80,78 +80,78 @@
             border: 4px solid white; display: flex; align-items: center; justify-content: center;
         }
         .shutter-inner {
-            width: 64px; height: 64px; border-radius: 50%;
-            background: white; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 62px; height: 62px; border-radius: 50%;
+            background: white; transition: all 0.2s ease;
         }
         .video-active .shutter-inner { background: var(--ios-red); }
-        .recording .shutter-inner { border-radius: 10px; transform: scale(0.55); }
+        .recording .shutter-inner { border-radius: 10px; transform: scale(0.5); }
 
-        .flip-icon {
-            width: 48px; height: 48px; border-radius: 50%;
-            background: #1c1c1e; display: flex; align-items: center; justify-content: center;
-        }
-
-        /* Gallery Overlay */
+        /* Gallery System */
         #gallery-view {
             position: fixed; inset: 0; background: black;
-            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(100%); transition: transform 0.3s ease;
             z-index: 100; display: flex; flex-direction: column;
         }
         #gallery-view.open { transform: translateY(0); }
 
-        .gallery-nav {
-            padding: 15px; display: flex; justify-content: space-between;
-            align-items: center; border-bottom: 0.5px solid #333;
-        }
-
+        .gallery-nav { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
         #grid-container {
             flex-grow: 1; display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 2px; overflow-y: auto; padding: 2px;
+            gap: 2px; overflow-y: auto;
         }
-        .grid-img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+        .grid-item { position: relative; width: 100%; aspect-ratio: 1; }
+        .grid-item img, .grid-item video { width: 100%; height: 100%; object-fit: cover; }
+        
+        .select-indicator {
+            position: absolute; top: 5px; right: 5px;
+            width: 20px; height: 20px; border: 2px solid white;
+            border-radius: 50%; display: none;
+        }
+        body.selecting .select-indicator { display: block; }
+        .grid-item.selected .select-indicator { background: var(--ios-blue); border-color: var(--ios-blue); }
 
-        /* Fullscreen Photo Viewer */
         #photo-viewer {
             position: fixed; inset: 0; background: black; z-index: 200;
             display: none; align-items: center; justify-content: center;
         }
-        #photo-viewer img { max-width: 100%; max-height: 100%; }
-        #close-viewer { position: absolute; top: 40px; left: 20px; font-weight: bold; }
+        #photo-viewer img, #photo-viewer video { max-width: 100%; max-height: 100%; }
     </style>
 </head>
 <body class="photo-active">
 
     <div class="top-bar">
-        <span><svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg></span>
-        <span id="timer" style="display:none; color:white; font-variant-numeric: tabular-nums;">00:00</span>
-        <span><svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span>
+        <div class="top-icon" onclick="location.reload()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 20c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-18C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2z"/></svg>
+        </div>
+        <div id="timer" style="display:none; color:white; font-weight:600; font-family: monospace;">00:00</div>
+        <div class="top-icon" onclick="alert('Flash toggled')">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+        </div>
     </div>
 
     <div id="camera-wrapper">
-        <video id="video" autoplay playsinline></video>
+        <video id="video" autoplay playsinline muted></video>
+        <div class="portrait-overlay"></div>
         <div id="focus-square"></div>
     </div>
 
     <div class="bottom-ui">
         <div class="mode-container">
             <div class="mode-list">
-                <span class="mode" onclick="switchMode('video')">VIDEO</span>
-                <span class="mode active" onclick="switchMode('photo')">PHOTO</span>
-                <span class="mode">PORTRAIT</span>
+                <span class="mode" id="m-video">VIDEO</span>
+                <span class="mode active" id="m-photo">PHOTO</span>
+                <span class="mode" id="m-portrait">PORTRAIT</span>
             </div>
         </div>
 
         <div class="shutter-row">
-            <button class="thumb-link" id="btn-gallery">
+            <button class="thumb-link" onclick="toggleGallery(true)">
                 <img id="latest-thumb" src="" style="display:none">
             </button>
-
-            <div class="shutter-btn" id="shutter">
-                <div class="shutter-inner"></div>
-            </div>
-
-            <div class="flip-icon" id="btn-flip">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M16 7h-8l3-3h2l3 3zm-3 14h-2l-3-3h8l-3 3zm5-9c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6 6 2.69 6 6z"/></svg>
+            <div class="shutter-btn" id="shutter"><div class="shutter-inner"></div></div>
+            <div class="thumb-link" style="display:flex; align-items:center; justify-content:center; background:#1c1c1e" onclick="flipCam()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
             </div>
         </div>
     </div>
@@ -159,15 +159,14 @@
     <div id="gallery-view">
         <div class="gallery-nav">
             <span style="color:var(--ios-yellow)" onclick="toggleGallery(false)">Done</span>
-            <span style="font-weight:700">All Photos</span>
-            <span style="color:var(--ios-yellow)">Select</span>
+            <span id="gallery-title">Recents</span>
+            <span id="btn-select" style="color:var(--ios-yellow)" onclick="toggleSelectMode()">Select</span>
         </div>
         <div id="grid-container"></div>
     </div>
 
-    <div id="photo-viewer">
-        <span id="close-viewer">✕</span>
-        <img id="full-img" src="">
+    <div id="photo-viewer" onclick="this.style.display='none'">
+        <div id="viewer-content"></div>
     </div>
 
     <canvas id="canvas" style="display:none"></canvas>
@@ -175,44 +174,49 @@
     <script>
         const video = document.getElementById('video');
         const shutter = document.getElementById('shutter');
-        const galleryView = document.getElementById('gallery-view');
-        const grid = document.getElementById('grid-container');
         const latestThumb = document.getElementById('latest-thumb');
+        const grid = document.getElementById('grid-container');
         
         let stream, recorder, chunks = [];
-        let isFront = true, mode = 'photo', isRecording = false;
-        let photos = [];
+        let isFront = true, mode = 'photo', isRecording = false, isSelecting = false;
+        let items = []; // Stores {url, type}
 
-        // 1. Camera Engine
+        // 1. Core Camera Engine
         async function initCamera() {
             if(stream) stream.getTracks().forEach(t => t.stop());
+            
+            // Critical: Only request 'audio' if in Video mode
+            const constraints = {
+                video: { facingMode: isFront ? "user" : "environment" },
+                audio: (mode === 'video') 
+            };
+
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: isFront ? "user" : "environment" },
-                    audio: true
-                });
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
+                // Mute the video element so you don't hear feedback
+                video.muted = true; 
                 video.style.transform = isFront ? "scaleX(-1)" : "none";
-            } catch (e) { alert("Camera error: " + e); }
+            } catch (e) { console.error("Camera Init Failed", e); }
         }
 
-        // 2. Focus & Haptic effect
-        document.getElementById('camera-wrapper').onclick = (e) => {
-            const sq = document.getElementById('focus-square');
-            sq.style.left = `${e.clientX - 32}px`;
-            sq.style.top = `${e.clientY - 32 - 60}px`;
-            sq.style.display = 'block';
-            sq.style.transform = 'scale(1.3)';
-            setTimeout(() => sq.style.transform = 'scale(1)', 50);
-            setTimeout(() => sq.style.display = 'none', 1000);
-        };
+        // 2. Mode Switching
+        ['video', 'photo', 'portrait'].forEach(m => {
+            document.getElementById('m-'+m).onclick = () => {
+                mode = m;
+                document.body.className = m + '-active';
+                document.querySelectorAll('.mode').forEach(el => el.classList.remove('active'));
+                document.getElementById('m-'+m).classList.add('active');
+                initCamera(); // Restart camera to toggle mic
+            };
+        });
 
-        // 3. Shutter Logic
+        // 3. Shutter Actions
         shutter.onclick = () => {
-            if (mode === 'photo') {
-                capturePhoto();
-            } else {
+            if (mode === 'video') {
                 isRecording ? stopRecording() : startRecording();
+            } else {
+                capturePhoto();
             }
         };
 
@@ -221,23 +225,29 @@
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             if(isFront) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
-            ctx.drawImage(video, 0, 0);
-            saveItem(canvas.toDataURL('image/jpeg'));
             
-            // Shutter blink effect
-            video.style.opacity = '0';
-            setTimeout(() => video.style.opacity = '1', 50);
+            // Add slight software blur for Portrait Mode
+            if(mode === 'portrait') ctx.filter = 'contrast(1.1) brightness(1.05)';
+            
+            ctx.drawImage(video, 0, 0);
+            const url = canvas.toDataURL('image/jpeg');
+            items.unshift({url, type: 'image'});
+            updateThumb(url);
+            
+            // Flash effect
+            video.style.opacity = 0; setTimeout(()=>video.style.opacity=1, 50);
         }
 
         function startRecording() {
             isRecording = true;
             document.body.classList.add('recording');
-            document.getElementById('timer').style.display = 'block';
             recorder = new MediaRecorder(stream);
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/mp4' });
-                saveItem(URL.createObjectURL(blob), true);
+                const url = URL.createObjectURL(blob);
+                items.unshift({url, type: 'video'});
+                updateThumb(url);
                 chunks = [];
             };
             recorder.start();
@@ -246,57 +256,62 @@
         function stopRecording() {
             isRecording = false;
             document.body.classList.remove('recording');
-            document.getElementById('timer').style.display = 'none';
             recorder.stop();
         }
 
-        function saveItem(url) {
-            photos.unshift(url);
+        function updateThumb(url) {
             latestThumb.src = url;
             latestThumb.style.display = 'block';
         }
 
-        // 4. UI Navigation
-        function switchMode(newMode) {
-            mode = newMode;
-            document.body.className = newMode + '-active';
-            document.querySelectorAll('.mode').forEach(m => {
-                m.classList.toggle('active', m.innerText.toLowerCase() === newMode);
-            });
-        }
-
+        // 4. Gallery Logic
         function toggleGallery(show) {
             if(show) {
-                grid.innerHTML = '';
-                photos.forEach(p => {
-                    const img = document.createElement('img');
-                    img.src = p; img.className = 'grid-img';
-                    img.onclick = () => openViewer(p);
-                    grid.appendChild(img);
-                });
-                galleryView.classList.add('open');
+                renderGrid();
+                document.getElementById('gallery-view').classList.add('open');
             } else {
-                galleryView.classList.remove('open');
+                document.getElementById('gallery-view').classList.remove('open');
+                isSelecting = false;
+                document.body.classList.remove('selecting');
             }
         }
 
-        function openViewer(src) {
-            document.getElementById('full-img').src = src;
+        function renderGrid() {
+            grid.innerHTML = '';
+            items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'grid-item';
+                div.innerHTML = item.type === 'image' 
+                    ? `<img src="${item.url}">` 
+                    : `<video src="${item.url}"></video>`;
+                div.innerHTML += `<div class="select-indicator"></div>`;
+                
+                div.onclick = () => {
+                    if(isSelecting) {
+                        div.classList.toggle('selected');
+                    } else {
+                        openViewer(item);
+                    }
+                };
+                grid.appendChild(div);
+            });
+        }
+
+        function toggleSelectMode() {
+            isSelecting = !isSelecting;
+            document.body.classList.toggle('selecting');
+            document.getElementById('btn-select').innerText = isSelecting ? "Cancel" : "Select";
+        }
+
+        function openViewer(item) {
+            const container = document.getElementById('viewer-content');
+            container.innerHTML = item.type === 'image' 
+                ? `<img src="${item.url}">` 
+                : `<video src="${item.url}" controls autoplay></video>`;
             document.getElementById('photo-viewer').style.display = 'flex';
         }
 
-        document.getElementById('close-viewer').onclick = () => {
-            document.getElementById('photo-viewer').style.display = 'none';
-        };
-
-        document.getElementById('btn-gallery').onclick = () => toggleGallery(true);
-        document.getElementById('btn-flip').onclick = () => { isFront = !isFront; initCamera(); };
-
-        // 5. Lifecycle Stop
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) stream?.getTracks().forEach(t => t.stop());
-            else initCamera();
-        });
+        function flipCam() { isFront = !isFront; initCamera(); }
 
         initCamera();
     </script>
